@@ -3,11 +3,77 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  STORE
+  RIDER
+  ADMIN
+  USER
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String   @unique
+  password  String
+  phone     String 
+  type      UserType @default(USER)
+  createdAt DateTime @default(now())
+
+  vehicle   Vehicle? 
+  
+  batches   Batch[]
+}
+
+model Vehicle {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  model        String
+  plate        String @unique // Placa do veículo
+  volumeLiters Float
+  weightMaxKg  Float
+  
+  // Conexão com o usuário (Rider)
+  ownerId      String @unique @db.ObjectId
+  owner        User   @relation(fields: [ownerId], references: [id])
+}
+
+model Package {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  description     String
+  weightKg        Float
+  volumeLiters    Float
+  deliveryAddress String
+  coordinates     String
+  status          String   @default("IN_WAREHOUSE") 
+  
+
+  deliveryCode    String?
+
+  batchId         String?  @db.ObjectId
+  batch           Batch?   @relation(fields: [batchId], references: [id])
+}
+
+model Batch {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  status    String    @default("CREATED")
+  routeLink String?   
+  createdAt DateTime  @default(now())
+
+  riderId   String    @db.ObjectId
+  rider     User      @relation(fields: [riderId], references: [id])
+
+  packages  Package[]
 }
