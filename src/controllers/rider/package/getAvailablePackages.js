@@ -83,9 +83,12 @@ export const getAvailablePackages = async (req, res) => {
       totalWeightKg: pkg.totalWeightKg,
       totalVolumeLiters: pkg.totalVolumeLiters,
       deliveryAddress: pkg.deliveryAddress,
-      coordinates: pkg.coordinates,
       status: pkg.status,
-      store: pkg.store,
+      store: {
+        name: pkg.store.name,
+        address: pkg.store.address,
+        avatarUrl: pkg.store.avatarUrl,
+      },
       distanceToStore: pkg.distanceToStore,
       deliveryFee: calculateDeliveryFee(pkg.distanceToStore)
       // pickupCode e deliveryCode NÃO são enviados aqui

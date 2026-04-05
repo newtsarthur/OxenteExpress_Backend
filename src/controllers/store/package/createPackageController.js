@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
 import axios from 'axios';
 import { getIo } from '../../../lib/socket.js';
+import { confirmStockPurchase } from '../stockReservationController.js';
 
 const prisma = new PrismaClient()
 
@@ -134,13 +135,6 @@ export const createOrder = async (req, res) => {
         const distanceKm = Number.isFinite(storeLat) && Number.isFinite(storeLon) ? calculateDistance(customerLat, customerLon, storeLat, storeLon) : 0;
         const deliveryFee = calculateDeliveryFee(distanceKm);
 
-        for (const item of group.items) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { quantity: { decrement: item.quantity } },
-          });
-        }
-
         const newPackage = await tx.package.create({
           data: {
             orderNumber,
@@ -163,11 +157,25 @@ export const createOrder = async (req, res) => {
           package: newPackage,
           storeId: group.storeId,
           deliveryFee,
+          items: group.items,
         });
       }
 
       return created;
     });
+
+    // Confirma a compra e reduz o estoque permanentemente
+    try {
+      for (const created of createdPackages) {
+        await confirmStockPurchase(customerId, created.items.map(item => ({
+          product: { id: item.productId },
+          quantity: item.quantity
+        })));
+      }
+    } catch (stockError) {
+      console.error('[createOrder] Error confirming stock purchase:', stockError);
+      // Continua o processo mesmo se houver erro na confirmação do estoque
+    }
 
     const io = getIo();
     if (io) {

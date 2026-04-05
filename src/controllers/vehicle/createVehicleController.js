@@ -8,7 +8,15 @@ export const createVehicle = async (req, res) => {
     const { model, plate, color, volumeLiters, weightMaxKg } = req.body;
     const userId = req.userId; // ID vindo do middleware de autenticação
 
-    // 1. Validação de perfil: apenas RIDER pode ter veículo
+    // 1. Validação de tamanho do modelo
+    if (!model || model.trim().length === 0) {
+      return res.status(400).json({ message: "Modelo do veículo é obrigatório." });
+    }
+    if (model.trim().length > 50) {
+      return res.status(400).json({ message: "Modelo do veículo não pode ter mais de 50 caracteres." });
+    }
+
+    // 2. Validação de perfil: apenas RIDER pode ter veículo
     const user = await prisma.user.findUnique({
       where: { id: userId }
     });

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { uploadAndOptimizeImage } from '../image/uploadImageController.js';
+import { getIo } from '../../lib/socket.js';
 
 const prisma = new PrismaClient();
 
@@ -8,7 +9,12 @@ export const updateVehicle = async (req, res) => {
     const userId = req.userId;
     const { model, plate, color, volumeLiters, weightMaxKg } = req.body;
 
-    // 1. Busca o veículo atual
+    // 1. Validação de tamanho do modelo
+    if (model && model.trim().length > 50) {
+      return res.status(400).json({ message: "Modelo do veículo não pode ter mais de 50 caracteres." });
+    }
+
+    // 2. Busca o veículo atual
     const existingVehicle = await prisma.vehicle.findUnique({
       where: { ownerId: userId }
     });
@@ -62,6 +68,16 @@ export const updateVehicle = async (req, res) => {
       where: { ownerId: userId },
       data: updateData
     });
+
+    // 6. Emite evento de atualização via Socket.io
+    const io = getIo();
+    if (io) {
+      io.emit('rider_updated', {
+        action: 'update',
+        riderId: userId,
+        vehicle: updatedVehicle
+      });
+    }
 
     res.status(200).json({ 
       message: "Veículo atualizado com sucesso!", 

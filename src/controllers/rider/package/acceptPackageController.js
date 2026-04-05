@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { getIo } from '../../../lib/socket.js';
 
 const prisma = new PrismaClient();
 
@@ -41,6 +42,18 @@ export const acceptPackage = async (req, res) => {
       return { newBatch, updatedPackage };
     });
 
+    const io = getIo();
+    if (io) {
+      io.emit('customer_order_status', {
+        packageId,
+        status: 'PICKING_UP',
+      });
+      io.emit('rider_packages_updated', {
+        packageId,
+        status: 'PICKING_UP',
+      });
+    }
+
     // 3. Resposta com as informações de coleta "liberadas"
     res.status(200).json({
       message: "Pedido aceito! Siga para a loja para realizar a coleta.",
@@ -52,7 +65,6 @@ export const acceptPackage = async (req, res) => {
       store: {
         name: pkg.store.name,
         address: pkg.store.address,
-        coordinates: pkg.store.coordinates
       }
     });
 
