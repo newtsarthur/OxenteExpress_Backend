@@ -30,4 +30,9 @@ app.use(express.json())
 app.use('/', publicRoutes)
 app.use('/', auth, privateRoutes)
 
-app.listen(port, () => console.log(`🚀 Server rodando na porta ${port}`));
+export default app;
+
+// O listen só deve rodar localmente, não na Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => console.log(`🚀 Server rodando na porta ${port}`));
+}
