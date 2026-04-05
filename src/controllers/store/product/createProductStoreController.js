@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
 import axios from 'axios';
 import { uploadAndOptimizeImage } from '../../image/uploadImageController.js'; // Importando seu novo serviço
+import { getIo } from '../../../lib/socket.js';
 
 const prisma = new PrismaClient()
 
@@ -75,6 +76,15 @@ export const addProductToStock = async (req, res) => {
       } catch (uploadError) {
         console.error("Produto salvo, mas imagem falhou:", uploadError);
       }
+    }
+
+    const io = getIo();
+    if (io) {
+      // Emitir para todos os clientes conectados (clientes verão apenas produtos da loja que estão visualizando)
+      io.emit('product_updated', {
+        action: existingProduct ? 'update' : 'create',
+        product
+      });
     }
 
     res.status(201).json({ 

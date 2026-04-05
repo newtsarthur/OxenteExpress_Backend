@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import axios from 'axios';
 import { uploadAndOptimizeImage } from '../image/uploadImageController.js';
 import multer from 'multer';
+import { formatAddressFromNominatim, normalizeAddressString } from '../../lib/addressUtils.js';
 
 const prisma = new PrismaClient()
 
@@ -38,10 +39,11 @@ export const register = async (req, res) => {
 
         // 3. Coordenadas: prioriza body (ex: GPS do front); senão geocoding pelo endereço
         let coordinates = (coordinatesInput && String(coordinatesInput).trim()) || null;
+        let formattedAddress = address ? normalizeAddressString(address) : null;
         if (!coordinates && address) {
             try {
                 const encodedAddress = encodeURIComponent(address);
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`;
+                const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodedAddress}&limit=1`;
                 
                 const response = await axios.get(url, {
                     headers: { 'User-Agent': 'OxenteExpress_App' }
@@ -49,6 +51,7 @@ export const register = async (req, res) => {
 
                 if (response.data && response.data.length > 0) {
                     coordinates = `${response.data[0].lat},${response.data[0].lon}`;
+                    formattedAddress = formatAddressFromNominatim(response.data[0]);
                 }
             } catch (geoError) {
                 console.error("Erro ao buscar coordenadas no cadastro:", geoError);
@@ -75,7 +78,7 @@ export const register = async (req, res) => {
                 password: hashPassword,
                 phone,
                 type: finalType,
-                address: address || null,
+                address: formattedAddress || null,
                 coordinates: coordinates || null,
                 createdAt: new Date(),
             },

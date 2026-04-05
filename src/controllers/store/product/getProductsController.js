@@ -95,6 +95,7 @@ export const getNearbyProducts = async (req, res) => {
             totalInStockValue: parseFloat((product.price * product.quantity).toFixed(2)), 
             productImage: product.imageUrl || null,
             distanceKm: parseFloat(distance.toFixed(2)),
+            distanceLabel: `${parseFloat(distance.toFixed(2))} km de você`,
             phone: store.phone,
             storeName: store.name,
             storeImage: store.avatarUrl || null,

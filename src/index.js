@@ -16,6 +16,7 @@ const app = express()
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5173',
+  'http://localhost:8080',
   'http://localhost:3000'
 ].filter(Boolean);
 
@@ -45,9 +46,13 @@ app.use(express.json())
 app.use('/', publicRoutes)
 app.use('/', auth, privateRoutes)
 
-export default app;
+// Inicializar Socket.io
+const server = createServer(app);
+initSocket(server, allowedOrigins);
 
 // O listen só deve rodar localmente, não na Vercel
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(port, () => console.log(`🚀 Server rodando na porta ${port}`));
+  server.listen(port, () => console.log(`🚀 Server rodando na porta ${port}`));
 }
+
+export default app;

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
 import axios from 'axios';
 import { uploadAndOptimizeImage } from '../../image/uploadImageController.js';
+import { getIo } from '../../../lib/socket.js';
 
 const prisma = new PrismaClient()
 
@@ -50,6 +51,15 @@ export const deleteProduct = async (req, res) => {
     await prisma.product.delete({
       where: { id: id }
     });
+
+    const io = getIo();
+    if (io) {
+      // Emitir para todos os clientes conectados
+      io.emit('product_updated', {
+        action: 'delete',
+        productId: id
+      });
+    }
 
     res.status(200).json({ 
       message: "Produto e imagem removidos com sucesso!" 

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client'
 import axios from 'axios';
 import { uploadAndOptimizeImage } from '../../image/uploadImageController.js';
+import { getIo } from '../../../lib/socket.js';
 
 const prisma = new PrismaClient()
 
@@ -62,6 +63,15 @@ export const updateProduct = async (req, res) => {
     } catch (dbError) {
       console.error(`[updateProduct] Erro ao salvar no banco para product ${id}:`, dbError);
       return res.status(500).json({ message: "Falha ao salvar o produto no banco.", error: dbError.message || dbError });
+    }
+
+    const io = getIo();
+    if (io) {
+      // Emitir para todos os clientes conectados (clientes verão apenas produtos da loja que estão visualizando)
+      io.emit('product_updated', {
+        action: 'update',
+        product: updatedProduct
+      });
     }
 
     res.status(200).json({

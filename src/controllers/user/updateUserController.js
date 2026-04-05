@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { uploadAndOptimizeImage } from '../image/uploadImageController.js';
+import { normalizeAddressString } from '../../lib/addressUtils.js';
+import { getIo } from '../../lib/socket.js';
 
 const prisma = new PrismaClient();
 
@@ -31,7 +33,7 @@ export const updateUser = async (req, res) => {
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
-    if (address) updateData.address = address;
+    if (address) updateData.address = normalizeAddressString(address);
     if (coordinates !== undefined && coordinates !== null && String(coordinates).trim() !== "") {
       updateData.coordinates = String(coordinates).trim();
     }
@@ -75,6 +77,15 @@ export const updateUser = async (req, res) => {
     } catch (dbError) {
       console.error(`[updateUser] Erro ao salvar no banco para user ${userId}:`, dbError);
       return res.status(500).json({ message: "Falha ao salvar o perfil no banco.", error: dbError.message || dbError });
+    }
+
+    // 5. Emite evento de atualização via Socket.io
+    const io = getIo();
+    if (io) {
+      io.emit('user_updated', {
+        action: 'update',
+        user: updatedUser
+      });
     }
 
     res.status(200).json({ 

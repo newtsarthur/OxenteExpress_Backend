@@ -1,8 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
+import { handleStockReservation, cleanupExpiredReservations } from '../controllers/store/stockReservationController.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 let io = null;
+
+// Cleanup expired reservations every 5 minutes
+setInterval(cleanupExpiredReservations, 5 * 60 * 1000);
 
 export const initSocket = (httpServer, corsOrigin = []) => {
   if (io) return io;
@@ -38,6 +42,11 @@ export const initSocket = (httpServer, corsOrigin = []) => {
     if (socket.userId) {
       socket.join(socket.userId);
     }
+
+    // Handle stock reservation events
+    socket.on('reserve_stock', (data) => {
+      handleStockReservation(socket, data);
+    });
   });
 
   return io;

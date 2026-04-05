@@ -27,6 +27,7 @@ import { confirmPickup } from '../controllers/store/package/confirmPickupControl
 
 import { finishDelivery } from '../controllers/rider/package/finishDeliveryController.js';
 import { getVehicle } from '../controllers/vehicle/getVehicleController.js';
+import { calculateShippingFee } from '../controllers/store/package/calculateShippingFeeController.js';
 
 
 
@@ -64,6 +65,7 @@ router.put('/product/:id', upload.single('image'), updateProduct)
 router.delete('/product/:id', deleteProduct)
 
 // Rota para o Cliente fazer o pedido (Carrinho)
+router.post('/package/calculate-shipping', calculateShippingFee);
 router.post('/package/order', createOrder);
 router.patch('/package/status', updatePackageStatus);
 router.get('/store/history', getStoreDeliveredHistory);
