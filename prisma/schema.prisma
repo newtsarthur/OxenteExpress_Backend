@@ -27,43 +27,122 @@ enum UserType {
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
+  avatarUrl String?
   email     String   @unique
   password  String
   phone     String 
   type      UserType @default(USER)
   createdAt DateTime @default(now())
+  address         String?
+  coordinates     String?
+
+  customerPackages Package[] @relation("CustomerPackages")
 
   vehicle   Vehicle? 
   
-  batches   Batch[]
+  batches   Batch[]  @relation("RiderBatches")
+
+  packages  Package[] @relation("StorePackages")
+
+  products  Product[]
 }
 
 model Vehicle {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
   model        String
-  plate        String @unique // Placa do veículo
-  volumeLiters Float
-  weightMaxKg  Float
+  color        String?
+  plate        String   @unique
+  vehicleUrl   String?
   
-  // Conexão com o usuário (Rider)
-  ownerId      String @unique @db.ObjectId
-  owner        User   @relation(fields: [ownerId], references: [id])
+  // Capacidades (Essenciais para o cálculo do Batch)
+  volumeLiters Float    @default(0)
+  weightMaxKg  Float    @default(0)
+  
+  // Relacionamento 1:1 com o Entregador (Rider)
+  ownerId      String   @unique @db.ObjectId
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Controle de Auditoria
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  imageUrl     String?
+  description  String?
+  price        Float    @default(0)
+  quantity     Float    @default(0)
+  unit         String   @default("un")
+  weightKg     Float    @default(0)
+  volumeLiters Float    @default(0)
+  
+  storeId      String   @db.ObjectId
+  store        User     @relation(fields: [storeId], references: [id])
+  
+  packageItems PackageItem[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Package {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  description     String
-  weightKg        Float
-  volumeLiters    Float
-  deliveryAddress String
-  coordinates     String
-  status          String   @default("IN_WAREHOUSE") 
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber       String        @unique // Mudamos para String para usar prefixos como OX-123
   
+  // 🔥 Códigos de Segurança
+  pickupCode        String?       // Código para a Loja validar o Entregador
+  deliveryCode      String?       // Código para o Entregador validar o Cliente
 
-  deliveryCode    String?
+  items             PackageItem[]
 
-  batchId         String?  @db.ObjectId
-  batch           Batch?   @relation(fields: [batchId], references: [id])
+  // Logística e Valores
+  totalWeightKg     Float         @default(0)
+  totalVolumeLiters Float         @default(0)
+  totalPrice        Float         @default(0)
+
+  // Destino
+  deliveryAddress   String
+  coordinates       String
+  
+  // 🔥 Status Evoluído
+  // PENDING (Cliente pediu), PREPARING (Loja aceitou), READY (Aguardando Entregador),
+  // PICKED_UP (Em trânsito), DELIVERED (Finalizado), CANCELLED
+  status            String        @default("PENDING") 
+
+  // Relacionamento com a Loja
+  storeId           String        @db.ObjectId
+  store             User          @relation("StorePackages", fields: [storeId], references: [id])
+
+  // Relacionamento com o Lote (Logística)
+  batchId           String?       @db.ObjectId
+  batch             Batch?        @relation(fields: [batchId], references: [id])
+
+  // Relacionamento com o Cliente
+  customerId        String        @db.ObjectId
+  customer          User          @relation("CustomerPackages", fields: [customerId], references: [id])
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model PackageItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  
+  quantity  Float
+  priceAtPurchase Float
+  subtotal        Float
+
+  name            String
+  description     String?
+  productImage    String?
+
+  packageId String  @db.ObjectId
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 model Batch {
@@ -73,7 +152,7 @@ model Batch {
   createdAt DateTime  @default(now())
 
   riderId   String    @db.ObjectId
-  rider     User      @relation(fields: [riderId], references: [id])
+  rider     User      @relation("RiderBatches", fields: [riderId], references: [id])
 
   packages  Package[]
 }

@@ -4,17 +4,24 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "start": "node src/index.js",
+    "test": "jest",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "@supabase/supabase-js": "^2.101.1",
+    "axios": "^1.14.0",
     "bcrypt": "^6.0.0",
     "bson": "^7.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "prisma": "^6.5.0"
+    "multer": "^2.1.1",
+    "prisma": "^6.5.0",
+    "sharp": "^0.34.5",
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "jest": "^30.3.0",

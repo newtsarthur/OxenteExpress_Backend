@@ -6,43 +6,48 @@ const prisma = new PrismaClient()
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-//Login
+// Login
 export const login = async (req, res) => {
     try {
-      const userInfo = req.body;
+      const { email, password } = req.body; 
   
-      // Buscar o usuário no banco de dados
+      // 1. Buscar o usuário no banco de dados
       const user = await prisma.user.findUnique({ 
-        where: { email: userInfo.email }
+        where: { email }
       });
   
-      // Verifica se ele existe no banco de dados
+      // 2. Verifica se ele existe no banco de dados
       if (!user) {
-        return res.status(404).json({ message: "Esse usuário não existe" });
+        return res.status(404).json({ message: "E-mail ou senha incorretos." }); 
       }
   
-      const isMatch = await bcrypt.compare(userInfo.password, user.password);
+      // 3. Compara a senha digitada com a senha salva (hash)
+      const isMatch = await bcrypt.compare(password, user.password);
   
-      // Compara a senha digitada com a senha salva no banco de dados
       if (!isMatch) {
-        return res.status(400).json({ message: "Senha inválida!" });
+        return res.status(400).json({ message: "E-mail ou senha incorretos." });
       }
   
-      // Gerar o Token JWT
+      // 4. Gerar o Token JWT
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
   
-      // Retorna o token e as informações do usuário
+      // 5. Retorna o token e as informações do usuário
       res.status(200).json({
         token,
         user: {
-          id: user.id, // Certifique-se de que o userId está sendo retornado
+          id: user.id,
           name: user.name,
           email: user.email,
-          createdAt: user.createdAt,
+          avatarUrl: user.avatarUrl, // 🔥 Adicionado para retornar a foto (ex: users/id.webp)
           type: user.type,
+          phone: user.phone, 
+          address: user.address, // Útil para o front já saber onde o usuário está
+          coordinates: user.coordinates,
+          createdAt: user.createdAt,
         },
       });
     } catch (error) {
+      console.error("Erro no Login:", error);
       res.status(500).json({ message: "Erro, tente novamente mais tarde!" });
     }
 };
