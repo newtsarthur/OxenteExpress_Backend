@@ -1,68 +1,148 @@
-# OxenteExpress - Backend
+# Oxente Express — Backend
 
-O **OxenteExpress** é uma plataforma de logística inteligente projetada para conectar pequenos negócios, entregadores e clientes finais. Este repositório contém a central de inteligência e o motor de controle de toda a operação, garantindo que a comunicação entre lojistas e entregadores ocorra de forma segura, rápida e organizada.
-
----
+<p align="center">
+  Plataforma de delivery inteligente — conectando lojas, entregadores e clientes em Pernambuco.
+</p>
 
 ## Visão Geral
 
-O sistema funciona como o núcleo de processamento para o aplicativo de logística. Desenvolvido com **Node.js** e utilizando o **Prisma ORM** para a comunicação com o banco de dados **MongoDB Atlas**, o backend gerencia as regras de negócio, a segurança dos dados e a orquestração das entregas.
+O Oxente Express é o motor central que conecta pequenos negócios, entregadores e clientes finais. Este repositório gerencia regras de negócio, autenticação, geolocalização, pedidos e suporte com IA — tudo orquestrado via API REST e atualizado em polling para compatibilidade total com Vercel (serverless).
 
----
+## Tech Stack
 
-## Tecnologias Utilizadas
+<!-- Backend -->
+| Camada | Tecnologia |
+|---|---|
+| Runtime | Node.js 22 |
+| Framework HTTP | Express 5 |
+| ORM | Prisma 6.5 |
+| Banco de Dados | MongoDB Atlas |
+| Storage de Imagens | Supabase Storage |
+| Autenticação | JWT (jsonwebtoken) + bcrypt |
+| Upload de Arquivos | Multer |
+| Otimização de Imagens | Sharp |
+| CORS | cors (middleware) |
+| HTTP Client | axios (geocoding Nominatim, etc.) |
+| Testes | Jest + Supertest |
+| Dev | Nodemon (hot reload) |
+| Deploy | Vercel (serverless) |
 
-- **Node.js (v22)** — Ambiente de execução focado em alta performance e escalabilidade  
-- **Prisma 6.5** — ORM moderno para mapeamento de modelos (Usuário, Veículo, Pacotes)  
-- **MongoDB Atlas** — Banco de dados NoSQL em nuvem  
-- **JWT (JSON Web Token)** — Autenticação e autorização segura  
-- **bcrypt** — Criptografia de senhas  
+<!-- IA & Real-time -->
+| Módulo | Detalhes |
+|---|---|
+| Suporte IA | OpenRouter API — rotação de modelos gratuitos (`qwen/qwen3.6-plus:free`, `openrouter/free`, `minimax/minimax-m2.5:free`, `stepfun/step-3.5-flash:free`) |
+| Atualizações em tempo real | HTTP Polling (5s Store/Rider, 8s Customer) — compatível com Vercel serverless |
+| Notificações sonoras | Web Audio API no frontend (beep ao detectar novos pedidos) |
 
----
+## Configuração Local
 
-## Arquitetura e Funcionalidades
+```bash
+# 1. Instale as dependências
+npm install
 
-O ecossistema é sustentado por três pilares fundamentais gerenciados pelo backend:
+# 2. Configure o .env (copie de .env.example)
+cp .env.example .env
 
-### 1. Segurança e Controle de Acesso
+# 3. Gere o cliente Prisma
+npx prisma generate
 
-O sistema diferencia os perfis de acesso entre:
+# 4. Aplique migrações (se necessário)
+npx prisma migrate dev
 
-- **STORE (Lojistas)**
-- **RIDER (Entregadores)**
-- **USER (Usuários)**
-- **ADMIN (Admin)**
+# 5. Inicie o servidor
+npm run dev
+```
 
-Através de **middlewares de autenticação**, o backend valida cada requisição, impedindo acessos indevidos.
+### Variáveis de Ambiente
 
----
+| Variável | Descrição | Obrigatória |
+|---|---|---|
+| `DATABASE_URL` | String de conexão ao MongoDB | Sim |
+| `JWT_SECRET` | Chave secreta para assinar tokens JWT | Sim |
+| `SUPABASE_URL` | URL do projeto Supabase | Sim |
+| `SUPABASE_KEY` | Chave de acesso ao Supabase (service role) | Sim |
+| `FRONTEND_URL` | URL do frontend (CORS) | Sim |
+| `OPENROUTER_API_KEY` | Chave da API OpenRouter para suporte IA | Não¹ |
 
-### 2. Gestão de Frota e Perfis
+> ¹ Necessária apenas se quiser o suporte com IA ativo. Sem ela, a rota retorna 502.
 
-O backend permite o gerenciamento detalhado dos entregadores e seus veículos:
+## Estrutura de Rotas
 
-- Vinculação de placas  
-- Controle de capacidade de carga  
-- Organização de volumes  
+### Públicas
 
-Preparando o sistema para futuras otimizações de rotas.
+| Método | Path | Descrição |
+|---|---|---|
+| `POST` | `/cadastro` | Registro de usuário (multipart: nome, email, senha, tipo, imagem) |
+| `POST` | `/login` | Login com email e senha |
+| `GET` | `/vehicle/fipe/search` | Busca de veículos FIPE |
+| `GET` | `/vehicle/fipe/brands` | Marcas FIPE |
+| `GET` | `/vehicle/fipe/years` | Anos FIPE por marca/modelo |
+| `GET` | `/vehicle/fipe/details` | Detalhes FIPE do veículo |
 
----
+### Autenticadas (Bearer Token)
 
-### 3. Regras de Negócio e Integridade
+| Método | Path | Papel | Descrição |
+|---|---|---|---|
+| `PUT` | `/update` | Todos | Atualizar perfil do usuário |
+| `DELETE` | `/delete-user/:id` | Auth | Deletar conta |
+| `POST` | `/stores` | Customer | Buscar lojas próximas (raio configurável, default: 15km) |
+| `GET` | `/products` | Auth | Listar todos os produtos |
+| `GET` | `/store/:storeId/products` | Customer | Catálogo de uma loja específica |
+| `POST` | `/product/create` | Store | Criar produto com imagem |
+| `PUT` | `/product/:id` | Store | Atualizar produto |
+| `DELETE` | `/product/:id` | Store | Deletar produto |
+| `POST` | `/package/order` | Customer | Criar pedido (carrinho) |
+| `POST` | `/package/calculate-shipping` | Customer | Calcular taxa de envio |
+| `GET` | `/package/customer` | Customer | Meus pedidos |
+| `PATCH` | `/package/status` | Store | Atualizar status do pedido |
+| `GET` | `/store/orders` | Store | Pedidos ativos da loja |
+| `GET` | `/store/history` | Store | Histórico de entregas da loja |
+| `POST` | `/store/confirm-pickup` | Store | Confirmar coleta com código |
+| `GET` | `/vehicle` | Rider | Veículo do entregador |
+| `POST` | `/:id/cadastro_veiculo` | Rider | Cadastrar veículo |
+| `PUT` | `/vehicle/update` | Rider | Atualizar veículo |
+| `GET` | `/rider/packages` | Rider | Pacotes disponíveis (por localização) |
+| `GET` | `/rider/current-delivery` | Rider | Entrega em andamento |
+| `POST` | `/rider/accept-package` | Rider | Aceitar pacote |
+| `POST` | `/rider/finish-delivery` | Rider | Finalizar entrega (código de entrega) |
+| `GET` | `/rider/history` | Rider | Histórico de entregas |
+| `POST` | `/support/ai` | Auth | Perguntar ao Oxente AI (suporte IA) |
 
-- Validação de unicidade (e-mails e placas)  
-- Restrição de cadastro de veículos apenas para **RIDER**  
-- Estruturação de **Batches (Lotes)** para otimização de entregas  
+## Fluxos Principais
 
----
+### Geolocalização e Busca de Lojas
 
-## Integração com o Frontend
+1. Coordenadas do perfil do usuário (salvas no cadastro)
+2. Fallback: geolocalização do navegador via Geolocation API
+3. Backend calcula distância com fórmula de Haversine e filtra por raio (default: **15km**)
 
-O backend fornece uma API para aplicações (ex: **React Native**) com suporte a:
+### Pipeline de Pedidos
 
-- Validação de sessões  
-- Consulta de veículos  
-- Rastreamento e status de entregas  
+```
+PENDING → PREPARING → READY → PICKING_UP → IN_TRANSIT → DELIVERED
+```
 
----
+1. **Cliente** cria pedido → status `PENDING`
+2. **Loja** inicia preparo → `PREPARING` → marca como pronto → `READY`
+3. **Entregador** aceita pacote → `PICKING_UP`
+4. **Loja** confirma coleta com código → `IN_TRANSIT`
+5. **Entregador** entrega com código do cliente → `DELIVERED`
+
+### Suporte com IA (Oxente AI)
+
+- Endpoint `POST /support/ai` — requer token JWT
+- Rate limit: **5 perguntas a cada 30 minutos** por usuário
+- Rotação automática entre modelos gratuitos OpenRouter
+- Personalidade: informal, pernambucana, conhecedora das regras do app
+
+## Deploy na Vercel
+
+1. Configure todas as variáveis de ambiente no painel da Vercel
+2. Push na `main` = deploy automático
+3. O arquivo `vercel.json` já está configurado para serverless
+
+> **Nota:** Vercel não suporta conexões persistentes (WebSocket/SSE). O frontend usa polling (setInterval) para atualizações em tempo real — funciona em qualquer ambiente.
+
+## Licença
+
+[MIT](LICENSE)
