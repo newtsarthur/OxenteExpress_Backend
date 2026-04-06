@@ -28,6 +28,7 @@ import { confirmPickup } from '../controllers/store/package/confirmPickupControl
 import { finishDelivery } from '../controllers/rider/package/finishDeliveryController.js';
 import { getVehicle } from '../controllers/vehicle/getVehicleController.js';
 import { calculateShippingFee } from '../controllers/store/package/calculateShippingFeeController.js';
+import { askAI } from '../controllers/support/aiSupportController.js';
 
 
 
@@ -75,5 +76,8 @@ router.get('/rider/current-delivery', getCurrentDelivery);
 router.post('/rider/accept-package', acceptPackage);
 router.post('/store/confirm-pickup', confirmPickup);
 router.post('/rider/finish-delivery', finishDelivery);
+
+// --- IA SUPORTE ---
+router.post('/support/ai', askAI);
 
 export default router
